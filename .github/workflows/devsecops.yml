@@ -56,11 +56,14 @@ jobs:
               print(f'  [{sev}] {path}:{line} — {msg}')
           "
 
+      - name: Generar reporte HTML de Semgrep
+        run: python scripts/generate_report.py
+
       - name: Subir reporte SAST como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-results
-          path: semgrep-results.json
+          name: semgrep-report-html
+          path: semgrep-report.html
 
       # ─── SCA: pip-audit ──────────────────────────────────────────
       - name: Análisis SCA con pip-audit
