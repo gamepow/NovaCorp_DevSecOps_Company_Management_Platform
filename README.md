@@ -1,5 +1,5 @@
 # NovaCorp - DevSecOps - Company Management Platform
-
+#Daniel Carvajal, Duvan Latorre, Renato Montenegro
 **NovaCorp Platform** is an internal web application for managing companies and their associated comments. It supports three roles (`admin`, `owner`, `user`) with different access levels.
 
 ---
