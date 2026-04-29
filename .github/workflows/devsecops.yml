@@ -119,7 +119,7 @@ jobs:
         run: |
           echo "Esperando a que la aplicación desplegada esté activa..."
           for i in {1..12}; do
-            if curl -s -L --fail ${{ secrets.APP_URL }} > /dev/null; then
+            if curl -s -L --fail "${{ secrets.APP_URL }}" > /dev/null; then
               echo "Aplicación disponible."
               exit 0
             fi
@@ -132,11 +132,7 @@ jobs:
       - name: OWASP ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
-          target: ${{ secrets.APP_URL }}
+          target: "${{ secrets.APP_URL }}"
           cmd_options: "-I"
-
-      - name: Subir reporte DAST como artefacto
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: report_html.html
+          allow_issue_writing: false
+          artifact_name: zap-report
