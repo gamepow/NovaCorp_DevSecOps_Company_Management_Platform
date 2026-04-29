@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Instalar dependencias del proyecto
         run: |
@@ -107,17 +108,35 @@ jobs:
   dast-zap:
     name: DAST con OWASP ZAP
     runs-on: ubuntu-latest
-    # Descomenta cuando tengas la URL de Render:
-    # needs: security-checks
-    if: false  # ← Cambia a: github.ref == 'refs/heads/main'
+    needs: security-checks
+    if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout
+      - name: Checkout del repositorio
         uses: actions/checkout@v4
+
+      - name: Esperar a que la aplicación esté disponible
+        run: |
+          echo "Esperando a que la aplicación desplegada esté activa..."
+          for i in {1..12}; do
+            if curl -s -L --fail ${{ secrets.APP_URL }} > /dev/null; then
+              echo "Aplicación disponible."
+              break
+            fi
+            echo "Intento $i fallido. Reintentando en 10 segundos..."
+            sleep 10
+          done
+          echo "La aplicación no respondió tras 2 minutos."
+          exit 1
 
       - name: OWASP ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.11.0
         with:
-          target: "https://TU-APP.onrender.com"  # ← sustituir
-          rules_file_name: ".zap/rules.tsv"
-          cmd_options: "-I"  # -I = no falla el pipeline por hallazgos
+          target: ${{ secrets.APP_URL }}
+          cmd_options: "-I"
+
+      - name: Subir reporte DAST como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html
