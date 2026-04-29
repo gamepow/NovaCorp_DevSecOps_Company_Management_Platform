@@ -135,4 +135,3 @@ jobs:
           target: "${{ secrets.APP_URL }}"
           cmd_options: "-I"
           allow_issue_writing: false
-          artifact_name: zap-report
