@@ -121,7 +121,7 @@ jobs:
           for i in {1..12}; do
             if curl -s -L --fail ${{ secrets.APP_URL }} > /dev/null; then
               echo "Aplicación disponible."
-              break
+              exit 0
             fi
             echo "Intento $i fallido. Reintentando en 10 segundos..."
             sleep 10
