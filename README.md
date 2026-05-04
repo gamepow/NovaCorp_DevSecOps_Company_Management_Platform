@@ -4,16 +4,54 @@
 
 ---
 
-## Installation
+## Deployment and Installation
 
-```bash
-pip install -r requirements.txt
-python main.py
-```
+> [!IMPORTANT]
+> All the commands listed below must be executed from the root directory of the project.
 
-Visit: `http://127.0.0.1:5000`
+### Option 1: Local Deployment (using Virtual Environment)
 
-The database is automatically initialized on first run.
+1.  **Create and activate a virtual environment**:
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+2.  **Install dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Configure Environment Variables**:
+    Create a `.env` file in the root directory. You can use the following command to generate a secure secret key:
+    ```bash
+    echo "FLASK_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')" > .env
+    ```
+
+4.  **Run the application**:
+    ```bash
+    python3 main.py
+    ```
+    Visit: `http://localhost:5000`
+
+---
+
+### Option 2: Docker Deployment
+
+1.  **Build the Docker image**:
+    ```bash
+    docker build -t novacorp-app .
+    ```
+
+2.  **Run the container**:
+    Ensure you have your `.env` file created (see step 3 above), then run:
+    ```bash
+    docker run -p 5000:5000 --env-file .env novacorp-app
+    ```
+    Visit: `http://localhost:5000`
+
+> [!NOTE]
+> The database is automatically initialized on the first run of the application.
 
 ---
 
@@ -62,3 +100,4 @@ The database is automatically initialized on first run.
 - SQLite
 - Bootstrap 5.3
 - Jinja2 + Bootstrap Icons
+- Docker
