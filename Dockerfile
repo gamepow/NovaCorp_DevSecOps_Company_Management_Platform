@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del código
 COPY . .
 
+# Cambiar el propietario de los archivos al usuario appuser
+USER root
+RUN chown -R appuser:appuser /app
+
 # Cambiar al usuario sin privilegios
 USER appuser
 
