@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ─── SAST: Semgrep ───────────────────────────────────────────
+      # 1. Ejecutar SAST (Semgrep)
       - name: Análisis SAST con Semgrep
         run: |
           pip install semgrep
@@ -37,36 +37,17 @@ jobs:
             --output semgrep-results.json \
             . || true
 
-      # ─── Control de calidad (Quality Gate) ──────────────────────
-      - name: Evaluar criticidad y decidir resultado
-        run: |
-          python -c "
-          import json, sys
-          with open('semgrep-results.json') as f:
-              data = json.load(f)
-          results = data.get('results', [])
-          # descomentar para que falle cuando se encuentren vulnerabilidades criticas.
-          # critical = [r for r in results if r.get('extra',{}).get('severity') == 'ERROR']
-          critical = []
-          if critical:
-              print(f'ATENCIÓN: {len(critical)} hallazgo(s) CRÍTICOS detectados.')
-              sys.exit(1) # Esto detiene el pipeline e impide el deploy
-          else:
-              print('Sin hallazgos críticos. Pipeline OK.')
-          "
-
+      # 2. Generar y subir reporte SAST (Incluso si hay fallos)
       - name: Generar reporte HTML de Semgrep
-        if: always() # Se ejecuta aunque el paso anterior falle
         run: python scripts/generate_report.py
 
       - name: Subir reporte SAST como artefacto
-        if: always() # Se ejecuta aunque el paso anterior falle
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-report-html
           path: semgrep-report.html
 
-      # ─── SCA: pip-audit ──────────────────────────────────────────
+      # 3. Ejecutar y subir reporte SCA (pip-audit)
       - name: Análisis SCA con pip-audit
         run: |
           pip install pip-audit
@@ -78,10 +59,29 @@ jobs:
           name: pip-audit-results
           path: pip-audit-results.txt
 
+      # 4. FINALMENTE: Evaluar criticidad para bloquear o permitir el deploy
+      - name: Evaluar criticidad y decidir resultado
+        run: |
+          python -c "
+          import json, sys
+          with open('semgrep-results.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          # Aquí filtramos por errores críticos (ERROR)
+          critical = [r for r in results if r.get('extra',{}).get('severity') == 'ERROR']
+          
+          if critical:
+              print(f'FALLO: Se encontraron {len(critical)} hallazgos CRÍTICOS.')
+              print('El despliegue ha sido bloqueado automáticamente.')
+              sys.exit(1) # Este error aquí detiene el inicio de los siguientes JOBS
+          else:
+              print('Sin hallazgos críticos. Pipeline autorizado para continuar.')
+          "
+
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: security-checks # Solo inicia si security-checks termina con éxito
+    needs: security-checks
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Trigger Render Deployment
@@ -91,7 +91,7 @@ jobs:
   dast-zap:
     name: DAST con OWASP ZAP
     runs-on: ubuntu-latest
-    needs: deploy # Solo inicia si el deploy terminó con éxito
+    needs: deploy
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout del repositorio
@@ -99,13 +99,12 @@ jobs:
 
       - name: Esperar a que la aplicación esté disponible
         run: |
-          echo "Esperando a que la aplicación esté activa en Render..."
+          echo "Esperando a que la aplicación esté activa..."
           for i in {1..12}; do
             if curl -s -L --fail "${{ secrets.APP_URL }}" > /dev/null; then
               echo "Aplicación disponible."
               exit 0
             fi
-            echo "Intento $i fallido. Reintentando..."
             sleep 10
           done
           exit 1
