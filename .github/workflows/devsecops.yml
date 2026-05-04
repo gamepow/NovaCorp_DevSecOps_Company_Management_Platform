@@ -10,7 +10,6 @@ jobs:
   security-checks:
     name: SAST + SCA
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
@@ -37,30 +36,29 @@ jobs:
             --json \
             --output semgrep-results.json \
             . || true
-          echo "=== Resumen SAST (Semgrep) ==="
+
+      # ─── Control de calidad (Quality Gate) ──────────────────────
+      - name: Evaluar criticidad y decidir resultado
+        run: |
           python -c "
           import json, sys
           with open('semgrep-results.json') as f:
               data = json.load(f)
           results = data.get('results', [])
-          if not results:
-              print('No se encontraron hallazgos.')
-              sys.exit(0)
-          highs = [r for r in results if r.get('extra',{}).get('severity') in ('ERROR','WARNING')]
-          print(f'Total hallazgos: {len(results)}')
-          print(f'Alta criticidad:  {len(highs)}')
-          for r in results:
-              sev = r.get('extra',{}).get('severity','?')
-              msg = r.get('extra',{}).get('message','')[:80]
-              path = r.get('path','')
-              line = r.get('start',{}).get('line','')
-              print(f'  [{sev}] {path}:{line} — {msg}')
+          critical = [r for r in results if r.get('extra',{}).get('severity') == 'ERROR']
+          if critical:
+              print(f'ATENCIÓN: {len(critical)} hallazgo(s) CRÍTICOS detectados.')
+              sys.exit(1) # Esto detiene el pipeline e impide el deploy
+          else:
+              print('Sin hallazgos críticos. Pipeline OK.')
           "
 
       - name: Generar reporte HTML de Semgrep
+        if: always() # Se ejecuta aunque el paso anterior falle
         run: python scripts/generate_report.py
 
       - name: Subir reporte SAST como artefacto
+        if: always() # Se ejecuta aunque el paso anterior falle
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-report-html
@@ -70,12 +68,7 @@ jobs:
       - name: Análisis SCA con pip-audit
         run: |
           pip install pip-audit
-          echo "=== Resumen SCA (pip-audit) ==="
-          pip-audit \
-            --requirement requirements.txt \
-            --format columns \
-            --output pip-audit-results.txt || true
-          cat pip-audit-results.txt
+          pip-audit --requirement requirements.txt --output pip-audit-results.txt || true
 
       - name: Subir reporte SCA como artefacto
         uses: actions/upload-artifact@v4
@@ -83,50 +76,36 @@ jobs:
           name: pip-audit-results
           path: pip-audit-results.txt
 
-      # ─── Control de calidad (opcional pero valorado) ─────────────
-      - name: Evaluar criticidad y decidir resultado
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: security-checks # Solo inicia si security-checks termina con éxito
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render Deployment
         run: |
-          python -c "
-          import json
-          with open('semgrep-results.json') as f:
-              data = json.load(f)
-          results = data.get('results', [])
-          critical = [r for r in results if r.get('extra',{}).get('severity') == 'ERROR']
-          if critical:
-              print(f'ATENCIÓN: {len(critical)} hallazgo(s) de alta criticidad detectados.')
-              print('Revisar antes de mergear a main.')
-              # Descomenta la siguiente línea si quieres que el pipeline falle:
-              # raise SystemExit(1)
-          else:
-              print('Sin hallazgos críticos. Pipeline OK.')
-          "
+          curl -f "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
-      - name: Pipeline finalizado
-        run: echo "✅ Análisis completado. Revisar artefactos adjuntos."
-
-  # ─── DAST: OWASP ZAP (solo en main, cuando Render esté listo) ───
   dast-zap:
     name: DAST con OWASP ZAP
     runs-on: ubuntu-latest
-    needs: security-checks
+    needs: deploy # Solo inicia si el deploy terminó con éxito
     if: github.ref == 'refs/heads/main'
-
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
       - name: Esperar a que la aplicación esté disponible
         run: |
-          echo "Esperando a que la aplicación desplegada esté activa..."
+          echo "Esperando a que la aplicación esté activa en Render..."
           for i in {1..12}; do
             if curl -s -L --fail "${{ secrets.APP_URL }}" > /dev/null; then
               echo "Aplicación disponible."
               exit 0
             fi
-            echo "Intento $i fallido. Reintentando en 10 segundos..."
+            echo "Intento $i fallido. Reintentando..."
             sleep 10
           done
-          echo "La aplicación no respondió tras 2 minutos."
           exit 1
 
       - name: OWASP ZAP Full Scan
