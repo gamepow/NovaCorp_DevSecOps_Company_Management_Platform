@@ -1,12 +1,16 @@
+# Nombre del flujo de trabajo: Pipeline de DevSecOps
+# Este pipeline automatiza las pruebas de seguridad (SAST, SCA, DAST) y el despliegue.
 name: DevSecOps Pipeline
 
 on:
+  # Se ejecuta en cada push y pull request a cualquier rama.
   push:
     branches: ["**"]
   pull_request:
     branches: ["**"]
 
 jobs:
+  # JOB 1: Análisis estático de seguridad (SAST) y de dependencias (SCA)
   security-checks:
     name: SAST + SCA
     runs-on: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 1. Ejecutar SAST (Semgrep)
+      # 1. Ejecutar SAST (Semgrep) para encontrar vulnerabilidades en el código fuente.
       - name: Análisis SAST con Semgrep
         run: |
           pip install semgrep
@@ -37,29 +41,31 @@ jobs:
             --output semgrep-results.json \
             . || true
 
-      # 2. Generar y subir reporte SAST (Incluso si hay fallos)
+      # 2. Generar un reporte visual en HTML a partir de los resultados de Semgrep.
       - name: Generar reporte HTML de Semgrep
         run: python scripts/generate_report.py
 
+      # Subir el reporte SAST como un artefacto descargable desde GitHub Actions.
       - name: Subir reporte SAST como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-report-html
-          path: semgrep-report.html
+          name: SAST-semgrep-report
+          path: SAST-semgrep-report.html
 
-      # 3. Ejecutar y subir reporte SCA (pip-audit)
+      # 3. Ejecutar SCA (pip-audit) para detectar librerías vulnerables.
       - name: Análisis SCA con pip-audit
         run: |
           pip install pip-audit
           pip-audit --requirement requirements.txt --output pip-audit-results.txt || true
 
+      # Subir los resultados del análisis de dependencias como artefacto.
       - name: Subir reporte SCA como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: pip-audit-results
-          path: pip-audit-results.txt
+          name: SCA-pip-audit-results
+          path: SCA-pip-audit-results.txt
 
-      # 4. FINALMENTE: Evaluar criticidad para bloquear o permitir el deploy
+      # 4. Evaluación de seguridad: Si se encuentran hallazgos con severidad 'ERROR', se bloquea el pipeline.
       - name: Evaluar criticidad y decidir resultado
         run: |
           python -c "
@@ -67,17 +73,19 @@ jobs:
           with open('semgrep-results.json') as f:
               data = json.load(f)
           results = data.get('results', [])
-          # Aquí filtramos por errores críticos (ERROR)
+          # Filtramos los hallazgos críticos (severidad ERROR)
           critical = [r for r in results if r.get('extra',{}).get('severity') == 'ERROR']
           
           if critical:
               print(f'FALLO: Se encontraron {len(critical)} hallazgos CRÍTICOS.')
               print('El despliegue ha sido bloqueado automáticamente.')
-              sys.exit(1) # Este error aquí detiene el inicio de los siguientes JOBS
+              sys.exit(1) # Detiene el pipeline si hay errores críticos
           else:
               print('Sin hallazgos críticos. Pipeline autorizado para continuar.')
           "
 
+  # JOB 2: Despliegue automático a Render
+  # Este job solo se ejecuta si el job previo (security-checks) fue exitoso y estamos en la rama 'main'.
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
@@ -86,8 +94,11 @@ jobs:
     steps:
       - name: Trigger Render Deployment
         run: |
+          # Realiza una petición al Webhook de Render para iniciar el deploy.
           curl -f "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
+  # JOB 3: Análisis dinámico de seguridad (DAST) con OWASP ZAP
+  # Se ejecuta después del despliegue para analizar la aplicación en tiempo de ejecución.
   dast-zap:
     name: DAST con OWASP ZAP
     runs-on: ubuntu-latest
@@ -97,6 +108,7 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
+      # Paso crítico: Asegurar que la aplicación ya esté levantada en Render antes de escanear.
       - name: Esperar a que la aplicación esté disponible
         run: |
           echo "Esperando a que la aplicación esté activa..."
@@ -109,8 +121,14 @@ jobs:
           done
           exit 1
 
+      # Ejecutar el escaneo completo de OWASP ZAP contra la URL de producción.
       - name: OWASP ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: "${{ secrets.APP_URL }}"
           allow_issue_writing: false
+
+      # El artefacto será generado por la acción zaproxy/action-full-scan y se llamará 'zap_scan'.
+      # El reporte DAST se sube como un artefacto descargable desde GitHub Actions.
+      
+# --- Fin del Pipeline de DevSecOps ---

@@ -1,10 +1,23 @@
 # NovaCorp - DevSecOps - Company Management Platform
-#Daniel Carvajal, Duvan Latorre, Renato Montenegro
+
 **NovaCorp Platform** is an internal web application for managing companies and their associated comments. It supports three roles (`admin`, `owner`, `user`) with different access levels.
 
 ---
 
-## Deployment and Installation
+## 🚀 Live Deployment
+The application is deployed on Render:
+[**NovaCorp Platform**](https://novacorp-devsecops-company-management.onrender.com)
+
+---
+
+## 👥 Team Members
+- **Daniel Carvajal Boza**
+- **Duvan Rene Latorre Zapata**
+- **Renato Agustín Montenegro Palma**
+
+---
+
+## 🛠️ Deployment and Installation
 
 > [!IMPORTANT]
 > All the commands listed below must be executed from the root directory of the project.
@@ -71,6 +84,7 @@
 .
 ├── main.py                 # Entry point
 ├── server.py               # Flask app configuration
+├── Dockerfile              # Docker container configuration
 ├── db/
 │   └── __init__.py         # Database initialization and helpers
 ├── routes/
@@ -89,7 +103,10 @@
 │   └── errors/             # 404, 403 pages
 ├── static/
 │   └── css/style.css       # Custom styles
-└── requirements.txt
+├── .gitignore              # Git ignore rules
+├── init_db.py              # Manual database setup script
+├── LICENSE.md              # Project license
+└── requirements.txt        # Python dependencies
 ```
 
 ---
