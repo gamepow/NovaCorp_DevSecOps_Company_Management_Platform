@@ -37,6 +37,7 @@
                 </select>
             </div>
             <div class="col-md-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button class="btn btn-success" type="submit" onclick="return confirm('Create this user?');">
                     <i class="bi bi-person-plus"></i> Create
                 </button>
@@ -81,6 +82,7 @@ document.getElementById("role-select").addEventListener("change", function() {
                     </td>
                     <td>
                         <form method="post" action="/admin/users/edit" class="row gx-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="username" value="{{ user['username'] }}">
                             <div class="col-auto">
                                 <select name="role" class="form-select form-select-sm role-select" data-user="{{ user['username'] }}">
@@ -109,6 +111,7 @@ document.getElementById("role-select").addEventListener("change", function() {
                     <td>
                         <form method="post" action="/admin/users/delete" onsubmit="return confirm('Delete this user?');">
                             <input type="hidden" name="username" value="{{ user['username'] }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
                         </form>
                     </td>

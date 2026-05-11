@@ -25,6 +25,8 @@
                 <input class="form-control" type="text" name="owner" required>
             </div>
             <div class="col-md-4 d-flex align-items-end">
+                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button class="btn btn-success" type="submit" onclick="return confirm('Create this company?');">
                     <i class="bi bi-plus-circle"></i> Create
                 </button>
@@ -51,6 +53,7 @@
                     <td>{{ company['owner'] }}</td>
                     <td>
                         <form method="post" action="/admin/companies/delete" class="d-inline" onsubmit="return confirm('Delete this company?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="company" value="{{ company['id'] }}">
                             <button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
                         </form>

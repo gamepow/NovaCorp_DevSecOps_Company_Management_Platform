@@ -2,12 +2,16 @@ from flask import Flask, render_template
 from dotenv import load_dotenv
 import os
 from datetime import timedelta
+from flask_wtf.csrf import CSRFProtect
+
 
 load_dotenv() # Load environment variables from .env file
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 app.permanent_session_lifetime = timedelta(hours=1)
+
+csrf = CSRFProtect(app) 
 
 @app.errorhandler(404)
 def not_found(e):
