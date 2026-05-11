@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error — NovaCorp{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <h1 class="display-1 text-danger"><i class="bi bi-exclamation-triangle"></i> 500</h1>
+        <h2 class="mb-4">Internal Server Error</h2>
+        <p class="lead text-muted">Something went wrong on our end. We've been notified and are looking into it.</p>
+        <hr>
+        <a href="/dashboard" class="btn btn-primary mt-3"><i class="bi bi-house"></i> Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
