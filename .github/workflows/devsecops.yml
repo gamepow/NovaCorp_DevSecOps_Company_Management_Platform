@@ -56,7 +56,7 @@ jobs:
       - name: Análisis SCA con pip-audit
         run: |
           pip install pip-audit
-          pip-audit --requirement requirements.txt --output pip-audit-results.txt || true
+          pip-audit --requirement requirements.txt --output SCA-pip-audit-results.txt || true
 
       # Subir los resultados del análisis de dependencias como artefacto.
       - name: Subir reporte SCA como artefacto

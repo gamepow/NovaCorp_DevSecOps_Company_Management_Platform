@@ -3,7 +3,7 @@ import sys
 from datetime import datetime
 
 INPUT_FILE = "semgrep-results.json"
-OUTPUT_FILE = "semgrep-report.html"
+OUTPUT_FILE = "SAST-semgrep-report.html"
 
 SEVERITY_META = {
     "ERROR":   {"label": "HIGH",   "color": "#e53e3e", "bg": "#fff5f5", "icon": "🔴"},
